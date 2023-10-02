@@ -1,5 +1,6 @@
 #  coding: utf-8 
 import socketserver
+import os
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -31,8 +32,38 @@ class MyWebServer(socketserver.BaseRequestHandler):
     
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        print ("Got a request of: %s\n" % self.data)
-        self.request.sendall(bytearray("OK",'utf-8'))
+        self.data = self.data.decode().split(" ")
+        if self.data[0]=="GET":
+            self.handle_get()
+            # print ("Got a request of: %s\n" % self.data)
+            # self.request.sendall(bytearray("OK",'utf-8'))
+
+        else:
+            self.request.sendall(bytearray('HTTP/1.1 405 Method Not Allowed\nContent-Type: text/plain; charset=utf-8\r\n\r\n','utf-8'))
+
+    def handle_get(self):
+        
+        directory = os.path.isdir('www' + self.data[1])
+        file = os.path.isfile('www' + self.data[1])
+
+        if directory:
+            if self.data[1][-1]!='/':
+                self.request.sendall(bytearray('HTTP/1.1 301 Moved Permanently\nLocation: {}\nContent-Type: text/plain; charset=utf-8\r\n\r\n'.format(self.data[1]+"/"), 'utf-8'))
+            else:
+                f = open("www/{}/index.html".format(self.data[1]), "r")
+                self.request.sendall(bytearray('HTTP/1.1 200 OK\nContent-Type: text/html; charset=utf-8\r\n\r\n', 'utf-8'))
+                self.request.sendall(f.read().encode('utf-8'))
+                f.close()
+        if file:
+            f = open("www/{}".format(self.data[1]), "r")
+            file_type = self.data[1].split(".")[1]
+            self.request.sendall(bytearray('HTTP/1.1 200 OK\nContent-Type: text/{}; charset=utf-8\r\n\r\n'.format(file_type), 'utf-8'))
+            self.request.sendall(f.read().encode('utf-8'))
+            f.close()
+
+        if not file and not directory:
+            self.request.sendall(bytearray('HTTP/1.1 404 Not Found\nContent-Type: text/plain; charset=utf-8\r\n\r\n', 'utf-8'))
+
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
