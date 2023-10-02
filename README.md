@@ -24,3 +24,8 @@ examples thus some of the code is Copyright © 2001-2013 Python
 Software Foundation; All Rights Reserved under the PSF license (GPL
 compatible) http://docs.python.org/2/library/socketserver.html
 
+# References used
+# https://www.geeksforgeeks.org/python-os-path-isdir-method/
+# https://note.nkmk.me/en/python-os-exists-isfile-isdir/
+# https://www.w3schools.com/python/python_file_open.asp
+# https://stackoverflow.com/questions/70817388/trying-to-send-http-response-message-over-tcp-in-python

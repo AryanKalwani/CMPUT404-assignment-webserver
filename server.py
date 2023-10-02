@@ -27,6 +27,12 @@ import os
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
+# References used
+# https://www.geeksforgeeks.org/python-os-path-isdir-method/
+# https://note.nkmk.me/en/python-os-exists-isfile-isdir/
+# https://www.w3schools.com/python/python_file_open.asp
+# https://stackoverflow.com/questions/70817388/trying-to-send-http-response-message-over-tcp-in-python
+
 
 class MyWebServer(socketserver.BaseRequestHandler):
     
@@ -35,34 +41,42 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.data = self.data.decode().split(" ")
         if self.data[0]=="GET":
             self.handle_get()
-            # print ("Got a request of: %s\n" % self.data)
-            # self.request.sendall(bytearray("OK",'utf-8'))
-
         else:
-            self.request.sendall(bytearray('HTTP/1.1 405 Method Not Allowed\nContent-Type: text/plain; charset=utf-8\r\n\r\n','utf-8'))
+            # Sending 405 for all other request methods
+            self.request.sendall(bytearray('HTTP/1.1 405 Method Not Allowed\r\nContent-Type: text/html; charset=utf-8\r\n\r\n','utf-8'))
+            self.request.sendall('405 - This method is not allowed. Only GET method is allowed.'.encode('utf-8'))
 
     def handle_get(self):
-        
+        # checking if the request param is a directory
         directory = os.path.isdir('www' + self.data[1])
+        # checking if the request param is a file
         file = os.path.isfile('www' + self.data[1])
 
-        if directory:
+        # checking if the directory/file being accessed is not upwards of the current directory
+        if "../" in self.data[1]:
+            self.request.sendall(bytearray('HTTP/1.1 404 Not Found\r\nContent-Type: text/html; charset=utf-8\r\n\r\n', 'utf-8'))
+            self.request.sendall('404 - Page that you requested was not found'.encode('utf-8'))
+        elif directory:
             if self.data[1][-1]!='/':
-                self.request.sendall(bytearray('HTTP/1.1 301 Moved Permanently\nLocation: {}\nContent-Type: text/plain; charset=utf-8\r\n\r\n'.format(self.data[1]+"/"), 'utf-8'))
+                # Redirecting to correct Location
+                self.request.sendall(bytearray('HTTP/1.1 301 Moved Permanently\r\nLocation: {}\nContent-Type: text/plain; charset=utf-8\r\n\r\n'.format(self.data[1]+"/"), 'utf-8'))
             else:
+                # Returning content of index.html by default with status OK
                 f = open("www/{}/index.html".format(self.data[1]), "r")
-                self.request.sendall(bytearray('HTTP/1.1 200 OK\nContent-Type: text/html; charset=utf-8\r\n\r\n', 'utf-8'))
+                self.request.sendall(bytearray('HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\n\r\n', 'utf-8'))
                 self.request.sendall(f.read().encode('utf-8'))
                 f.close()
-        if file:
+        elif file:
+            # Returning content of requested file with status OK
             f = open("www/{}".format(self.data[1]), "r")
             file_type = self.data[1].split(".")[1]
-            self.request.sendall(bytearray('HTTP/1.1 200 OK\nContent-Type: text/{}; charset=utf-8\r\n\r\n'.format(file_type), 'utf-8'))
+            self.request.sendall(bytearray('HTTP/1.1 200 OK\r\nContent-Type: text/{}; charset=utf-8\r\n\r\n'.format(file_type), 'utf-8'))
             self.request.sendall(f.read().encode('utf-8'))
             f.close()
-
         if not file and not directory:
-            self.request.sendall(bytearray('HTTP/1.1 404 Not Found\nContent-Type: text/plain; charset=utf-8\r\n\r\n', 'utf-8'))
+            # If not a valid file or directory, returning 404 Not Found
+            self.request.sendall(bytearray('HTTP/1.1 404 Not Found\r\nContent-Type: text/html; charset=utf-8\r\n\r\n', 'utf-8'))
+            self.request.sendall('404 - Page that you requested was not found'.encode('utf-8'))
 
 
 if __name__ == "__main__":
